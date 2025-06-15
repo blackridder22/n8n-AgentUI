@@ -3,12 +3,23 @@
 
 import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { ChatMessage } from "@/components/ui/chat-message";
+import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { RefreshCw } from "lucide-react";
+
+interface ChatMessage {
+  id: string;
+  message: string;
+  isUser: boolean;
+  timestamp: Date;
+}
 
 export function PlaceholdersAndVanishInputDemo() {
   const [sessionId, setSessionId] = useState(() => generateSessionId());
   const [isLoading, setIsLoading] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const placeholders = [
@@ -23,9 +34,18 @@ export function PlaceholdersAndVanishInputDemo() {
     return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   const handleNewConversation = () => {
     const newSessionId = generateSessionId();
     setSessionId(newSessionId);
+    setMessages([]);
     console.log("New conversation started with sessionId:", newSessionId);
     toast({
       title: "New Conversation",
@@ -33,9 +53,22 @@ export function PlaceholdersAndVanishInputDemo() {
     });
   };
 
+  const addMessage = (message: string, isUser: boolean) => {
+    const newMessage: ChatMessage = {
+      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      message,
+      isUser,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, newMessage]);
+  };
+
   const sendToWebhook = async (message: string) => {
     setIsLoading(true);
     const webhookUrl = "https://2b0b-199-115-144-75.ngrok-free.app/webhook/searchagentn8n";
+    
+    // Add user message to chat
+    addMessage(message, true);
     
     try {
       console.log("Sending to webhook:", { chatInput: message, sessionId });
@@ -52,8 +85,21 @@ export function PlaceholdersAndVanishInputDemo() {
       });
 
       if (response.ok) {
-        const responseData = await response.text();
+        const responseData = await response.json();
         console.log("Webhook response:", responseData);
+        
+        // Extract message from response and add to chat
+        let botMessage = "No response received";
+        if (Array.isArray(responseData) && responseData.length > 0 && responseData[0].output) {
+          botMessage = responseData[0].output;
+        } else if (responseData.output) {
+          botMessage = responseData.output;
+        } else if (typeof responseData === 'string') {
+          botMessage = responseData;
+        }
+        
+        addMessage(botMessage, false);
+        
         toast({
           title: "Message Sent",
           description: "Your message has been sent successfully",
@@ -63,6 +109,7 @@ export function PlaceholdersAndVanishInputDemo() {
       }
     } catch (error) {
       console.error("Error sending to webhook:", error);
+      addMessage("Sorry, there was an error processing your message.", false);
       toast({
         title: "Error",
         description: "Failed to send message to webhook",
@@ -89,36 +136,59 @@ export function PlaceholdersAndVanishInputDemo() {
   };
 
   return (
-    <div className="h-[40rem] flex flex-col justify-center items-center px-4">
-      <h2 className="mb-10 sm:mb-20 text-xl text-center sm:text-5xl dark:text-white text-black">
-        Ask Aceternity UI Anything
-      </h2>
-      
-      <div className="mb-6 flex flex-col items-center gap-4">
-        <div className="text-sm text-gray-600 dark:text-gray-400">
-          Session ID: <span className="font-mono text-xs">{sessionId}</span>
-        </div>
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
+        <h2 className="text-2xl font-semibold dark:text-white text-black">
+          Ask Aceternity UI Anything
+        </h2>
         <Button 
           onClick={handleNewConversation}
           variant="outline"
+          size="icon"
           disabled={isLoading}
+          className="h-10 w-10"
         >
-          New Conversation
+          <RefreshCw className="h-4 w-4" />
         </Button>
       </div>
 
-      <PlaceholdersAndVanishInput
-        placeholders={placeholders}
-        onChange={handleChange}
-        onSubmit={onSubmit}
-        disabled={isLoading}
-      />
-      
-      {isLoading && (
-        <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-          Sending message...
-        </div>
-      )}
+      {/* Chat Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+            <p>Start a conversation by typing a message below</p>
+          </div>
+        ) : (
+          <>
+            {messages.map((msg) => (
+              <ChatMessage
+                key={msg.id}
+                message={msg.message}
+                isUser={msg.isUser}
+                timestamp={msg.timestamp}
+              />
+            ))}
+            <div ref={messagesEndRef} />
+          </>
+        )}
+      </div>
+
+      {/* Input Area */}
+      <div className="p-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm border-t">
+        <PlaceholdersAndVanishInput
+          placeholders={placeholders}
+          onChange={handleChange}
+          onSubmit={onSubmit}
+          disabled={isLoading}
+        />
+        
+        {isLoading && (
+          <div className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+            Sending message...
+          </div>
+        )}
+      </div>
     </div>
   );
 }

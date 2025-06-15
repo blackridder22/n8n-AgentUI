@@ -5,7 +5,7 @@ import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-van
 import { Button } from "@/components/ui/button";
 import { ChatMessage } from "@/components/ui/chat-message";
 import { useState, useRef, useEffect } from "react";
-import { RefreshCw } from "lucide-react";
+import { MessageCirclePlus } from "lucide-react";
 
 interface ChatMessage {
   id: string;
@@ -133,7 +133,7 @@ export function PlaceholdersAndVanishInputDemo() {
           disabled={isLoading}
           className="h-10 w-10"
         >
-          <RefreshCw className="h-4 w-4" />
+          <MessageCirclePlus className="h-4 w-4" />
         </Button>
       </div>
 

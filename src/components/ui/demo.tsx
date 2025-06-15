@@ -340,12 +340,11 @@ export function PlaceholdersAndVanishInputDemo() {
       <ChatView messages={messages} messagesEndRef={messagesEndRef} />
 
       {/* Input Area */}
-      <div className="p-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm border-t border-border"> {/* Added border-border */}
+      <div className="p-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm border-t border-border">
         <div className="relative max-w-xl mx-auto">
           {showCommandPalette && filteredWebhooks.length > 0 && (
-            <div className="absolute bottom-full mb-2 w-full rounded-md border border-border bg-popover text-popover-foreground shadow-md z-50"> {/* Added border-border */}
-              <Command className="rounded-lg border border-border shadow-md"> {/* Added border-border to Command itself too */}
-              <Command className="rounded-lg border border-border shadow-md"> {/* Ensured Command also has border-border */}
+            <div className="absolute bottom-full mb-2 w-full rounded-md border border-border bg-popover text-popover-foreground shadow-md z-50">
+              <Command className="rounded-lg border border-border shadow-md">
                 <CommandList>
                   <CommandEmpty>No results found.</CommandEmpty>
                   <CommandGroup heading="Webhooks">

@@ -19,6 +19,7 @@ export function PlaceholdersAndVanishInputDemo() {
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [botResponse, setBotResponse] = useState("");
+  const [showBotResponseAnimation, setShowBotResponseAnimation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const placeholders = [
@@ -46,6 +47,7 @@ export function PlaceholdersAndVanishInputDemo() {
     setSessionId(newSessionId);
     setMessages([]);
     setBotResponse("");
+    setShowBotResponseAnimation(false);
     console.log("New conversation started with sessionId:", newSessionId);
   };
 
@@ -94,14 +96,16 @@ export function PlaceholdersAndVanishInputDemo() {
           botMessage = responseData;
         }
         
-        // Set bot response to trigger animation
+        // Set bot response and show animation in receiving area
         setBotResponse(botMessage);
+        setShowBotResponseAnimation(true);
       } else {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
     } catch (error) {
       console.error("Error sending to webhook:", error);
       setBotResponse("Sorry, there was an error processing your message.");
+      setShowBotResponseAnimation(true);
     } finally {
       setIsLoading(false);
     }
@@ -112,6 +116,7 @@ export function PlaceholdersAndVanishInputDemo() {
     if (botResponse) {
       addMessage(botResponse, false);
       setBotResponse("");
+      setShowBotResponseAnimation(false);
     }
   };
 
@@ -167,6 +172,23 @@ export function PlaceholdersAndVanishInputDemo() {
             <div ref={messagesEndRef} />
           </>
         )}
+        
+        {/* Bot Response Animation Area */}
+        {showBotResponseAnimation && botResponse && (
+          <div className="flex justify-start mb-4">
+            <div className="max-w-[80%] rounded-lg px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-none">
+              <PlaceholdersAndVanishInput
+                placeholders={[]}
+                onChange={() => {}}
+                onSubmit={() => {}}
+                disabled={true}
+                botResponse={botResponse}
+                onBotResponseComplete={handleBotResponseComplete}
+                isReceivingMode={true}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Input Area */}
@@ -176,8 +198,9 @@ export function PlaceholdersAndVanishInputDemo() {
           onChange={handleChange}
           onSubmit={onSubmit}
           disabled={isLoading}
-          botResponse={botResponse}
-          onBotResponseComplete={handleBotResponseComplete}
+          botResponse=""
+          onBotResponseComplete={() => {}}
+          isReceivingMode={false}
         />
         
         {isLoading && (

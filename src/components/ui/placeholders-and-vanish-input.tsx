@@ -1,3 +1,4 @@
+
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
@@ -11,6 +12,7 @@ export function PlaceholdersAndVanishInput({
   disabled = false,
   botResponse = "",
   onBotResponseComplete,
+  isReceivingMode = false,
 }: {
   placeholders: string[];
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -18,14 +20,17 @@ export function PlaceholdersAndVanishInput({
   disabled?: boolean;
   botResponse?: string;
   onBotResponseComplete?: () => void;
+  isReceivingMode?: boolean;
 }) {
   const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const startAnimation = () => {
-    intervalRef.current = setInterval(() => {
-      setCurrentPlaceholder((prev) => (prev + 1) % placeholders.length);
-    }, 3000);
+    if (!isReceivingMode && placeholders.length > 0) {
+      intervalRef.current = setInterval(() => {
+        setCurrentPlaceholder((prev) => (prev + 1) % placeholders.length);
+      }, 3000);
+    }
   };
   const handleVisibilityChange = () => {
     if (document.visibilityState !== "visible" && intervalRef.current) {
@@ -46,7 +51,7 @@ export function PlaceholdersAndVanishInput({
       }
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [placeholders]);
+  }, [placeholders, isReceivingMode]);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const newDataRef = useRef<any[]>([]);
@@ -56,7 +61,7 @@ export function PlaceholdersAndVanishInput({
   const [showingBotResponse, setShowingBotResponse] = useState(false);
 
   useEffect(() => {
-    if (botResponse && !showingBotResponse) {
+    if (botResponse && !showingBotResponse && isReceivingMode) {
       setShowingBotResponse(true);
       setValue(botResponse);
       
@@ -64,7 +69,7 @@ export function PlaceholdersAndVanishInput({
         vanishBotResponse();
       }, 2000);
     }
-  }, [botResponse]);
+  }, [botResponse, isReceivingMode]);
 
   const vanishBotResponse = () => {
     setAnimating(true);
@@ -228,13 +233,13 @@ export function PlaceholdersAndVanishInput({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !animating && !disabled && !showingBotResponse) {
+    if (e.key === "Enter" && !animating && !disabled && !showingBotResponse && !isReceivingMode) {
       vanishAndSubmit();
     }
   };
 
   const vanishAndSubmit = () => {
-    if (disabled || showingBotResponse) return;
+    if (disabled || showingBotResponse || isReceivingMode) return;
     
     setAnimating(true);
     draw();
@@ -251,21 +256,46 @@ export function PlaceholdersAndVanishInput({
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (disabled || showingBotResponse) return;
+    if (disabled || showingBotResponse || isReceivingMode) return;
     
     vanishAndSubmit();
     onSubmit && onSubmit(e);
   };
 
+  // For receiving mode, render a simplified version without form wrapper
+  if (isReceivingMode) {
+    return (
+      <div className="w-full relative">
+        <canvas
+          className={cn(
+            "absolute pointer-events-none text-base transform scale-50 top-[20%] left-2 origin-top-left filter invert dark:invert-0",
+            !animating ? "opacity-0" : "opacity-100"
+          )}
+          ref={canvasRef}
+        />
+        <input
+          ref={inputRef}
+          value={showingBotResponse ? botResponse : value}
+          type="text"
+          disabled={true}
+          className={cn(
+            "w-full text-sm border-none bg-transparent focus:outline-none focus:ring-0",
+            animating && "text-transparent dark:text-transparent",
+            "text-gray-900 dark:text-gray-100"
+          )}
+          readOnly={true}
+        />
+      </div>
+    );
+  }
+
   return (
     <form
       className={cn(
         "w-full relative max-w-xl mx-auto h-12 rounded-full overflow-hidden shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),_0px_1px_0px_0px_rgba(25,28,33,0.02),_0px_0px_0px_1px_rgba(25,28,33,0.08)] transition duration-200",
-        showingBotResponse 
-          ? "bg-gray-200 dark:bg-gray-700" 
-          : value 
-            ? "bg-gray-50 dark:bg-zinc-800" 
-            : "bg-white dark:bg-zinc-800",
+        value 
+          ? "bg-gray-50 dark:bg-zinc-800" 
+          : "bg-white dark:bg-zinc-800",
         disabled && "opacity-50 cursor-not-allowed"
       )}
       onSubmit={handleSubmit}
@@ -280,29 +310,26 @@ export function PlaceholdersAndVanishInput({
       <input
         name="message"
         onChange={(e) => {
-          if (!animating && !disabled && !showingBotResponse) {
+          if (!animating && !disabled) {
             setValue(e.target.value);
             onChange && onChange(e);
           }
         }}
         onKeyDown={handleKeyDown}
         ref={inputRef}
-        value={showingBotResponse ? botResponse : value}
+        value={value}
         type="text"
-        disabled={disabled || showingBotResponse}
+        disabled={disabled}
         className={cn(
           "w-full relative text-sm sm:text-base z-50 border-none h-full rounded-full focus:outline-none focus:ring-0 pl-4 sm:pl-10 pr-20",
           animating && "text-transparent dark:text-transparent",
-          showingBotResponse 
-            ? "text-gray-900 dark:text-gray-100 bg-transparent" 
-            : "dark:text-white bg-transparent text-black",
-          (disabled || showingBotResponse) && "cursor-not-allowed"
+          "dark:text-white bg-transparent text-black",
+          disabled && "cursor-not-allowed"
         )}
-        readOnly={showingBotResponse}
       />
 
       <button
-        disabled={!value || disabled || showingBotResponse}
+        disabled={!value || disabled}
         type="submit"
         className="absolute right-2 top-1/2 z-50 -translate-y-1/2 h-8 w-8 rounded-full disabled:bg-gray-100 bg-black dark:bg-zinc-900 dark:disabled:bg-zinc-800 transition duration-200 flex items-center justify-center"
       >
@@ -326,7 +353,7 @@ export function PlaceholdersAndVanishInput({
               strokeDashoffset: "50%",
             }}
             animate={{
-              strokeDashoffset: value && !showingBotResponse ? 0 : "50%",
+              strokeDashoffset: value ? 0 : "50%",
             }}
             transition={{
               duration: 0.3,
@@ -340,7 +367,7 @@ export function PlaceholdersAndVanishInput({
 
       <div className="absolute inset-0 flex items-center rounded-full pointer-events-none">
         <AnimatePresence mode="wait">
-          {!value && !showingBotResponse && (
+          {!value && (
             <motion.p
               initial={{
                 y: 5,

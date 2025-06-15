@@ -27,7 +27,7 @@ export function ChatMessage({ message, isUser, timestamp }: ChatMessageProps) {
         className={cn(
           "max-w-[80%] rounded-lg px-4 py-2 text-sm",
           isUser
-            ? "bg-blue-500 text-white rounded-br-none"
+            ? "bg-blue-500 text-white dark:bg-blue-600 rounded-br-none" // Added dark:bg-blue-600
             : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-none"
         )}
         initial={{ scale: 0.8 }}
@@ -44,7 +44,7 @@ export function ChatMessage({ message, isUser, timestamp }: ChatMessageProps) {
           <ReactMarkdown
             components={{
               strong: ({ node, ...props }) => <strong {...props} />,
-              p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+              p: ({ node, ...props }) => <p className="mb-2 last:mb-0 overflow-hidden break-words" {...props} />,
             }}
           >
             {message}

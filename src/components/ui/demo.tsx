@@ -2,7 +2,8 @@
 
 import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
 import { Button } from "@/components/ui/button";
-import { ChatMessage } from "@/components/ui/chat-message";
+// ChatMessage component is now used by ChatView
+// import { ChatMessage } from "@/components/ui/chat-message";
 import { useState, useRef, useEffect } from "react";
 import { RefreshCw, Webhook as WebhookIcon, Settings, Trash2 } from "lucide-react";
 import {
@@ -24,6 +25,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { WebhookManagementDialog } from "@/components/ui/webhook-management-dialog";
+import { ChatView } from "@/components/ui/chat-view";
 
 
 interface Webhook {
@@ -53,8 +56,6 @@ export function PlaceholdersAndVanishInputDemo() {
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [defaultWebhook, setDefaultWebhook] = useState<Webhook | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newWebhookName, setNewWebhookName] = useState("");
-  const [newWebhookUrl, setNewWebhookUrl] = useState("");
 
   useEffect(() => {
     try {
@@ -249,20 +250,18 @@ export function PlaceholdersAndVanishInputDemo() {
     }
   };
 
-  const handleAddWebhook = () => {
-    if (!newWebhookName.trim() || !newWebhookUrl.trim()) return;
+  const handleAddWebhook = (name: string, url: string) => {
+    if (!name.trim() || !url.trim()) return;
     const newWebhook: Webhook = {
       id: `wh_${Date.now()}`,
-      name: newWebhookName,
-      url: newWebhookUrl,
+      name: name,
+      url: url,
     };
     const updatedWebhooks = [...webhooks, newWebhook];
     setWebhooks(updatedWebhooks);
     if (!defaultWebhook) {
       setDefaultWebhook(newWebhook);
     }
-    setNewWebhookName("");
-    setNewWebhookUrl("");
   };
 
   const handleDeleteWebhook = (id: string) => {
@@ -314,131 +313,39 @@ export function PlaceholdersAndVanishInputDemo() {
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                disabled={isLoading}
-                className="h-10 w-10"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[525px]">
-              <DialogHeader>
-                <DialogTitle>Gérer les Webhooks</DialogTitle>
-                <DialogDescription>
-                  Ajoutez, supprimez et définissez un webhook par défaut.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <h4 className="font-semibold text-sm">Ajouter un nouveau Webhook</h4>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">
-                    Nom
-                  </Label>
-                  <Input
-                    id="name"
-                    value={newWebhookName}
-                    onChange={(e) => setNewWebhookName(e.target.value)}
-                    className="col-span-3"
-                    placeholder="Ex: Mon Agent"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="url" className="text-right">
-                    URL
-                  </Label>
-                  <Input
-                    id="url"
-                    value={newWebhookUrl}
-                    onChange={(e) => setNewWebhookUrl(e.target.value)}
-                    className="col-span-3"
-                    placeholder="https://votre-webhook-url.com"
-                  />
-                </div>
-                <Button onClick={handleAddWebhook}>Ajouter Webhook</Button>
-              </div>
-              <div className="space-y-2">
-                <h4 className="font-semibold text-sm">Webhooks Existants</h4>
-                <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
-                  {webhooks.length > 0 ? (
-                    webhooks.map((webhook) => (
-                    <div
-                      key={webhook.id}
-                      className="flex items-center justify-between p-2 border rounded-md"
-                    >
-                      <div>
-                        <p className="font-medium">
-                          {webhook.name}{" "}
-                          {webhook.id === defaultWebhook?.id && "(Défaut)"}
-                        </p>
-                        <p className="text-sm text-muted-foreground truncate max-w-[200px]">
-                          {webhook.url}
-                        </p>
-                      </div>
-                      <div className="flex gap-1">
-                        {webhook.id !== defaultWebhook?.id && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSetDefaultWebhook(webhook)}
-                          >
-                            Par défaut
-                          </Button>
-                        )}
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          onClick={() => handleDeleteWebhook(webhook.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))): (
-                    <p className="text-sm text-muted-foreground">Aucun webhook configuré.</p>
-                  )}
-                </div>
-              </div>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline">Fermer</Button>
-                </DialogClose>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <DialogTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={isLoading}
+              className="h-10 w-10"
+              onClick={() => setIsDialogOpen(true)}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <WebhookManagementDialog
+            open={isDialogOpen}
+            onOpenChange={setIsDialogOpen}
+            webhooks={webhooks}
+            defaultWebhook={defaultWebhook}
+            onAddWebhook={handleAddWebhook}
+            onDeleteWebhook={handleDeleteWebhook}
+            onSetDefaultWebhook={handleSetDefaultWebhook}
+          />
         </div>
       </div>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
-            <p>Start a conversation by typing a message below</p>
-          </div>
-        ) : (
-          <>
-            {messages.map((msg) => (
-              <ChatMessage
-                key={msg.id}
-                message={msg.message}
-                isUser={msg.isUser}
-                timestamp={msg.timestamp}
-              />
-            ))}
-            <div ref={messagesEndRef} />
-          </>
-        )}
-      </div>
+      <ChatView messages={messages} messagesEndRef={messagesEndRef} />
 
       {/* Input Area */}
-      <div className="p-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm border-t">
+      <div className="p-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm border-t border-border"> {/* Added border-border */}
         <div className="relative max-w-xl mx-auto">
           {showCommandPalette && filteredWebhooks.length > 0 && (
-            <div className="absolute bottom-full mb-2 w-full rounded-md border bg-popover text-popover-foreground shadow-md z-50">
-              <Command className="rounded-lg border shadow-md">
+            <div className="absolute bottom-full mb-2 w-full rounded-md border border-border bg-popover text-popover-foreground shadow-md z-50"> {/* Added border-border */}
+              <Command className="rounded-lg border border-border shadow-md"> {/* Added border-border to Command itself too */}
+              <Command className="rounded-lg border border-border shadow-md"> {/* Ensured Command also has border-border */}
                 <CommandList>
                   <CommandEmpty>No results found.</CommandEmpty>
                   <CommandGroup heading="Webhooks">

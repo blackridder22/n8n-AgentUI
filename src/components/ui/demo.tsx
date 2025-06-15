@@ -5,7 +5,7 @@ import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-van
 import { Button } from "@/components/ui/button";
 import { ChatMessage } from "@/components/ui/chat-message";
 import { useState, useRef, useEffect } from "react";
-import { RefreshCw, Webhook as WebhookIcon } from "lucide-react";
+import { RefreshCw, Webhook as WebhookIcon, Settings, Trash2 } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -13,6 +13,19 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
 
 interface Webhook {
   id: string;
@@ -36,19 +49,76 @@ export function PlaceholdersAndVanishInputDemo() {
   const [inputValue, setInputValue] = useState("");
   const [showCommandPalette, setShowCommandPalette] = useState(false);
 
-  const [webhooks] = useState<Webhook[]>([
-    {
-      id: "searchagent",
-      name: "SearchAgent",
-      url: "https://2b0b-199-115-144-75.ngrok-free.app/webhook/searchagentn8n",
-    },
-    {
-      id: "zapier",
-      name: "Zapier",
-      url: "https://hooks.zapier.com/hooks/catch/123456/abcde",
-    },
-  ]);
-  const [defaultWebhook] = useState<Webhook>(webhooks[0]);
+  const [webhooks, setWebhooks] = useState<Webhook[]>([]);
+  const [defaultWebhook, setDefaultWebhook] = useState<Webhook | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newWebhookName, setNewWebhookName] = useState("");
+  const [newWebhookUrl, setNewWebhookUrl] = useState("");
+
+  useEffect(() => {
+    try {
+      const storedWebhooks = localStorage.getItem("webhooks");
+      const storedDefaultWebhookId = localStorage.getItem("defaultWebhookId");
+
+      const initialWebhooks: Webhook[] = storedWebhooks
+        ? JSON.parse(storedWebhooks)
+        : [
+            {
+              id: "searchagent",
+              name: "SearchAgent",
+              url: "https://2b0b-199-115-144-75.ngrok-free.app/webhook/searchagentn8n",
+            },
+            {
+              id: "zapier",
+              name: "Zapier",
+              url: "https://hooks.zapier.com/hooks/catch/123456/abcde",
+            },
+          ];
+
+      setWebhooks(initialWebhooks);
+
+      if (storedDefaultWebhookId) {
+        const defaultW = initialWebhooks.find(w => w.id === storedDefaultWebhookId);
+        setDefaultWebhook(defaultW || initialWebhooks[0] || null);
+      } else {
+        setDefaultWebhook(initialWebhooks[0] || null);
+      }
+    } catch (error) {
+      console.error("Failed to load webhooks from localStorage", error);
+        const fallbackWebhooks = [
+            {
+              id: "searchagent",
+              name: "SearchAgent",
+              url: "https://2b0b-199-115-144-75.ngrok-free.app/webhook/searchagentn8n",
+            },
+            {
+              id: "zapier",
+              name: "Zapier",
+              url: "https://hooks.zapier.com/hooks/catch/123456/abcde",
+            },
+          ];
+        setWebhooks(fallbackWebhooks);
+        setDefaultWebhook(fallbackWebhooks[0]);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (webhooks.length > 0) {
+        localStorage.setItem("webhooks", JSON.stringify(webhooks));
+      } else {
+        localStorage.removeItem("webhooks");
+      }
+      if (defaultWebhook) {
+        localStorage.setItem("defaultWebhookId", defaultWebhook.id);
+      } else {
+        localStorage.removeItem("defaultWebhookId");
+      }
+    } catch (error) {
+        console.error("Failed to save webhooks to localStorage", error);
+    }
+  }, [webhooks, defaultWebhook]);
+
 
   const placeholders = [
     "What's the first rule of Fight Club?",
@@ -170,11 +240,46 @@ export function PlaceholdersAndVanishInputDemo() {
       }
     }
 
+    if (!targetWebhook) {
+      addMessage("Veuillez configurer un webhook par défaut dans les paramètres.", false);
+      return;
+    }
+
     if (finalMessage.trim() && targetWebhook) {
       console.log("submitted:", finalMessage, "to", targetWebhook.name);
       await sendToWebhook(finalMessage, targetWebhook.url);
+      setInputValue("");
     }
   };
+
+  const handleAddWebhook = () => {
+    if (!newWebhookName.trim() || !newWebhookUrl.trim()) return;
+    const newWebhook: Webhook = {
+      id: `wh_${Date.now()}`,
+      name: newWebhookName,
+      url: newWebhookUrl,
+    };
+    const updatedWebhooks = [...webhooks, newWebhook];
+    setWebhooks(updatedWebhooks);
+    if (!defaultWebhook) {
+      setDefaultWebhook(newWebhook);
+    }
+    setNewWebhookName("");
+    setNewWebhookUrl("");
+  };
+
+  const handleDeleteWebhook = (id: string) => {
+    const updatedWebhooks = webhooks.filter((w) => w.id !== id);
+    setWebhooks(updatedWebhooks);
+    if (defaultWebhook?.id === id) {
+      setDefaultWebhook(updatedWebhooks[0] || null);
+    }
+  };
+
+  const handleSetDefaultWebhook = (webhook: Webhook) => {
+    setDefaultWebhook(webhook);
+  };
+
 
   const handleAnimationComplete = () => {
     setInputValue("");
@@ -203,6 +308,101 @@ export function PlaceholdersAndVanishInputDemo() {
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={isLoading}
+                className="h-10 w-10"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[525px]">
+              <DialogHeader>
+                <DialogTitle>Gérer les Webhooks</DialogTitle>
+                <DialogDescription>
+                  Ajoutez, supprimez et définissez un webhook par défaut.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <h4 className="font-semibold text-sm">Ajouter un nouveau Webhook</h4>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="name" className="text-right">
+                    Nom
+                  </Label>
+                  <Input
+                    id="name"
+                    value={newWebhookName}
+                    onChange={(e) => setNewWebhookName(e.target.value)}
+                    className="col-span-3"
+                    placeholder="Ex: Mon Agent"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="url" className="text-right">
+                    URL
+                  </Label>
+                  <Input
+                    id="url"
+                    value={newWebhookUrl}
+                    onChange={(e) => setNewWebhookUrl(e.target.value)}
+                    className="col-span-3"
+                    placeholder="https://votre-webhook-url.com"
+                  />
+                </div>
+                <Button onClick={handleAddWebhook}>Ajouter Webhook</Button>
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-semibold text-sm">Webhooks Existants</h4>
+                <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
+                  {webhooks.length > 0 ? (
+                    webhooks.map((webhook) => (
+                    <div
+                      key={webhook.id}
+                      className="flex items-center justify-between p-2 border rounded-md"
+                    >
+                      <div>
+                        <p className="font-medium">
+                          {webhook.name}{" "}
+                          {webhook.id === defaultWebhook?.id && "(Défaut)"}
+                        </p>
+                        <p className="text-sm text-muted-foreground truncate max-w-[200px]">
+                          {webhook.url}
+                        </p>
+                      </div>
+                      <div className="flex gap-1">
+                        {webhook.id !== defaultWebhook?.id && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSetDefaultWebhook(webhook)}
+                          >
+                            Par défaut
+                          </Button>
+                        )}
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => handleDeleteWebhook(webhook.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))): (
+                    <p className="text-sm text-muted-foreground">Aucun webhook configuré.</p>
+                  )}
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Fermer</Button>
+                </DialogClose>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 

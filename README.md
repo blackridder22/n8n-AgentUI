@@ -7,12 +7,12 @@ There are several ways of editing your application.
 Follow these steps:
 # Step 1: Clone the repository using the project's Git URL.
 ```sh
-git clone <https://github.com/blackridder22/n8n-AgentUI>
+git clone https://github.com/blackridder22/n8n-AgentUI
 ```
 
 # Step 2: Navigate to the project directory.
 ```sh
-cd <n8n-AgentUI>
+cd n8n-AgentUI
 ```
 
 # Step 3: Install the necessary dependencies.

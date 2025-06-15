@@ -99,11 +99,6 @@ export function PlaceholdersAndVanishInputDemo() {
         }
         
         addMessage(botMessage, false);
-        
-        toast({
-          title: "Message Sent",
-          description: "Your message has been sent successfully",
-        });
       } else {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

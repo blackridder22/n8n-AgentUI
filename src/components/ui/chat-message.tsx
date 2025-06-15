@@ -1,5 +1,6 @@
 
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 interface ChatMessageProps {
   message: string;
@@ -9,14 +10,34 @@ interface ChatMessageProps {
 
 export function ChatMessage({ message, isUser, timestamp }: ChatMessageProps) {
   return (
-    <div className={cn("flex mb-4", isUser ? "justify-end" : "justify-start")}>
-      <div
+    <motion.div 
+      className={cn("flex mb-4", isUser ? "justify-end" : "justify-start")}
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ 
+        duration: 0.3, 
+        ease: "easeOut",
+        type: "spring",
+        stiffness: 100,
+        damping: 15
+      }}
+    >
+      <motion.div
         className={cn(
           "max-w-[80%] rounded-lg px-4 py-2 text-sm",
           isUser
             ? "bg-blue-500 text-white rounded-br-none"
             : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-none"
         )}
+        initial={{ scale: 0.8 }}
+        animate={{ scale: 1 }}
+        transition={{ 
+          duration: 0.2, 
+          delay: 0.1,
+          type: "spring",
+          stiffness: 200,
+          damping: 20
+        }}
       >
         <p className="whitespace-pre-wrap">{message}</p>
         {timestamp && (
@@ -27,7 +48,7 @@ export function ChatMessage({ message, isUser, timestamp }: ChatMessageProps) {
             {timestamp.toLocaleTimeString()}
           </p>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

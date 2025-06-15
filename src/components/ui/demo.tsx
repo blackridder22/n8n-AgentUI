@@ -5,7 +5,8 @@ import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-van
 import { Button } from "@/components/ui/button";
 import { ChatMessage } from "@/components/ui/chat-message";
 import { useState, useRef, useEffect } from "react";
-import { MessageCirclePlus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { RefreshCw } from "lucide-react";
 
 interface ChatMessage {
   id: string;
@@ -18,8 +19,8 @@ export function PlaceholdersAndVanishInputDemo() {
   const [sessionId, setSessionId] = useState(() => generateSessionId());
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [botResponse, setBotResponse] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const placeholders = [
     "What's the first rule of Fight Club?",
@@ -45,13 +46,16 @@ export function PlaceholdersAndVanishInputDemo() {
     const newSessionId = generateSessionId();
     setSessionId(newSessionId);
     setMessages([]);
-    setBotResponse("");
     console.log("New conversation started with sessionId:", newSessionId);
+    toast({
+      title: "New Conversation",
+      description: "Started a new conversation session",
+    });
   };
 
   const addMessage = (message: string, isUser: boolean) => {
     const newMessage: ChatMessage = {
-      id: `msg_${Date.now()}_${Math.random().toString(36).substr2, 9)}`,
+      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       message,
       isUser,
       timestamp: new Date(),
@@ -84,7 +88,7 @@ export function PlaceholdersAndVanishInputDemo() {
         const responseData = await response.json();
         console.log("Webhook response:", responseData);
         
-        // Extract message from response and trigger bot response animation
+        // Extract message from response and add to chat
         let botMessage = "No response received";
         if (Array.isArray(responseData) && responseData.length > 0 && responseData[0].output) {
           botMessage = responseData[0].output;
@@ -94,24 +98,20 @@ export function PlaceholdersAndVanishInputDemo() {
           botMessage = responseData;
         }
         
-        // Set bot response to trigger animation
-        setBotResponse(botMessage);
+        addMessage(botMessage, false);
       } else {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
     } catch (error) {
       console.error("Error sending to webhook:", error);
-      setBotResponse("Sorry, there was an error processing your message.");
+      addMessage("Sorry, there was an error processing your message.", false);
+      toast({
+        title: "Error",
+        description: "Failed to send message to webhook",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleBotResponseComplete = () => {
-    // Add bot message to chat when animation completes
-    if (botResponse) {
-      addMessage(botResponse, false);
-      setBotResponse("");
     }
   };
 
@@ -144,7 +144,7 @@ export function PlaceholdersAndVanishInputDemo() {
           disabled={isLoading}
           className="h-10 w-10"
         >
-          <MessageCirclePlus className="h-4 w-4" />
+          <RefreshCw className="h-4 w-4" />
         </Button>
       </div>
 
@@ -176,8 +176,6 @@ export function PlaceholdersAndVanishInputDemo() {
           onChange={handleChange}
           onSubmit={onSubmit}
           disabled={isLoading}
-          botResponse={botResponse}
-          onBotResponseComplete={handleBotResponseComplete}
         />
         
         {isLoading && (

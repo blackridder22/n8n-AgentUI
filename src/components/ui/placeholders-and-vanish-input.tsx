@@ -1,3 +1,4 @@
+
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
@@ -9,15 +10,11 @@ export function PlaceholdersAndVanishInput({
   onChange,
   onSubmit,
   disabled = false,
-  botResponse = "",
-  onBotResponseComplete,
 }: {
   placeholders: string[];
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   disabled?: boolean;
-  botResponse?: string;
-  onBotResponseComplete?: () => void;
 }) {
   const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
 
@@ -29,10 +26,10 @@ export function PlaceholdersAndVanishInput({
   };
   const handleVisibilityChange = () => {
     if (document.visibilityState !== "visible" && intervalRef.current) {
-      clearInterval(intervalRef.current);
+      clearInterval(intervalRef.current); // Clear the interval when the tab is not visible
       intervalRef.current = null;
     } else if (document.visibilityState === "visible") {
-      startAnimation();
+      startAnimation(); // Restart the interval when the tab becomes visible
     }
   };
 
@@ -53,78 +50,6 @@ export function PlaceholdersAndVanishInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState("");
   const [animating, setAnimating] = useState(false);
-  const [showingBotResponse, setShowingBotResponse] = useState(false);
-
-  useEffect(() => {
-    if (botResponse && !showingBotResponse) {
-      setShowingBotResponse(true);
-      setValue(botResponse);
-      
-      setTimeout(() => {
-        vanishBotResponse();
-      }, 2000);
-    }
-  }, [botResponse]);
-
-  const vanishBotResponse = () => {
-    setAnimating(true);
-    draw();
-
-    if (inputRef.current) {
-      const maxX = newDataRef.current.reduce(
-        (prev, current) => (current.x > prev ? current.x : prev),
-        0
-      );
-      animateBotResponse(maxX);
-    }
-  };
-
-  const animateBotResponse = (start: number) => {
-    const animateFrame = (pos: number = 0) => {
-      requestAnimationFrame(() => {
-        const newArr = [];
-        for (let i = 0; i < newDataRef.current.length; i++) {
-          const current = newDataRef.current[i];
-          if (current.x < pos) {
-            newArr.push(current);
-          } else {
-            if (current.r <= 0) {
-              current.r = 0;
-              continue;
-            }
-            current.x += Math.random() > 0.5 ? 1 : -1;
-            current.y += Math.random() > 0.5 ? 1 : -1;
-            current.r -= 0.05 * Math.random();
-            newArr.push(current);
-          }
-        }
-        newDataRef.current = newArr;
-        const ctx = canvasRef.current?.getContext("2d");
-        if (ctx) {
-          ctx.clearRect(pos, 0, 800, 800);
-          newDataRef.current.forEach((t) => {
-            const { x: n, y: i, r: s, color: color } = t;
-            if (n > pos) {
-              ctx.beginPath();
-              ctx.rect(n, i, s, s);
-              ctx.fillStyle = color;
-              ctx.strokeStyle = color;
-              ctx.stroke();
-            }
-          });
-        }
-        if (newDataRef.current.length > 0) {
-          animateFrame(pos - 8);
-        } else {
-          setValue("");
-          setAnimating(false);
-          setShowingBotResponse(false);
-          onBotResponseComplete?.();
-        }
-      });
-    };
-    animateFrame(start);
-  };
 
   const draw = useCallback(() => {
     if (!inputRef.current) return;
@@ -228,13 +153,13 @@ export function PlaceholdersAndVanishInput({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !animating && !disabled && !showingBotResponse) {
+    if (e.key === "Enter" && !animating && !disabled) {
       vanishAndSubmit();
     }
   };
 
   const vanishAndSubmit = () => {
-    if (disabled || showingBotResponse) return;
+    if (disabled) return;
     
     setAnimating(true);
     draw();
@@ -251,7 +176,7 @@ export function PlaceholdersAndVanishInput({
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (disabled || showingBotResponse) return;
+    if (disabled) return;
     
     vanishAndSubmit();
     onSubmit && onSubmit(e);
@@ -260,19 +185,15 @@ export function PlaceholdersAndVanishInput({
   return (
     <form
       className={cn(
-        "w-full relative max-w-xl mx-auto h-12 rounded-full overflow-hidden shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),_0px_1px_0px_0px_rgba(25,28,33,0.02),_0px_0px_0px_1px_rgba(25,28,33,0.08)] transition duration-200",
-        showingBotResponse 
-          ? "bg-gray-200 dark:bg-gray-700" 
-          : value 
-            ? "bg-gray-50 dark:bg-zinc-800" 
-            : "bg-white dark:bg-zinc-800",
+        "w-full relative max-w-xl mx-auto bg-white dark:bg-zinc-800 h-12 rounded-full overflow-hidden shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),_0px_1px_0px_0px_rgba(25,28,33,0.02),_0px_0px_0px_1px_rgba(25,28,33,0.08)] transition duration-200",
+        value && "bg-gray-50",
         disabled && "opacity-50 cursor-not-allowed"
       )}
       onSubmit={handleSubmit}
     >
       <canvas
         className={cn(
-          "absolute pointer-events-none text-base transform scale-50 top-[20%] left-2 sm:left-8 origin-top-left filter invert dark:invert-0 pr-20",
+          "absolute pointer-events-none  text-base transform scale-50 top-[20%] left-2 sm:left-8 origin-top-left filter invert dark:invert-0 pr-20",
           !animating ? "opacity-0" : "opacity-100"
         )}
         ref={canvasRef}
@@ -280,29 +201,25 @@ export function PlaceholdersAndVanishInput({
       <input
         name="message"
         onChange={(e) => {
-          if (!animating && !disabled && !showingBotResponse) {
+          if (!animating && !disabled) {
             setValue(e.target.value);
             onChange && onChange(e);
           }
         }}
         onKeyDown={handleKeyDown}
         ref={inputRef}
-        value={showingBotResponse ? botResponse : value}
+        value={value}
         type="text"
-        disabled={disabled || showingBotResponse}
+        disabled={disabled}
         className={cn(
-          "w-full relative text-sm sm:text-base z-50 border-none h-full rounded-full focus:outline-none focus:ring-0 pl-4 sm:pl-10 pr-20",
+          "w-full relative text-sm sm:text-base z-50 border-none dark:text-white bg-transparent text-black h-full rounded-full focus:outline-none focus:ring-0 pl-4 sm:pl-10 pr-20",
           animating && "text-transparent dark:text-transparent",
-          showingBotResponse 
-            ? "text-gray-900 dark:text-gray-100 bg-transparent" 
-            : "dark:text-white bg-transparent text-black",
-          (disabled || showingBotResponse) && "cursor-not-allowed"
+          disabled && "cursor-not-allowed"
         )}
-        readOnly={showingBotResponse}
       />
 
       <button
-        disabled={!value || disabled || showingBotResponse}
+        disabled={!value || disabled}
         type="submit"
         className="absolute right-2 top-1/2 z-50 -translate-y-1/2 h-8 w-8 rounded-full disabled:bg-gray-100 bg-black dark:bg-zinc-900 dark:disabled:bg-zinc-800 transition duration-200 flex items-center justify-center"
       >
@@ -326,7 +243,7 @@ export function PlaceholdersAndVanishInput({
               strokeDashoffset: "50%",
             }}
             animate={{
-              strokeDashoffset: value && !showingBotResponse ? 0 : "50%",
+              strokeDashoffset: value ? 0 : "50%",
             }}
             transition={{
               duration: 0.3,
@@ -340,7 +257,7 @@ export function PlaceholdersAndVanishInput({
 
       <div className="absolute inset-0 flex items-center rounded-full pointer-events-none">
         <AnimatePresence mode="wait">
-          {!value && !showingBotResponse && (
+          {!value && (
             <motion.p
               initial={{
                 y: 5,

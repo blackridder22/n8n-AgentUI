@@ -51,7 +51,7 @@ export function PlaceholdersAndVanishInputDemo() {
 
   const addMessage = (message: string, isUser: boolean) => {
     const newMessage: ChatMessage = {
-      id: `msg_${Date.now()}_${Math.random().toString(36).substr2, 9)}`,
+      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       message,
       isUser,
       timestamp: new Date(),

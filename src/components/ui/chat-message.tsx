@@ -40,7 +40,7 @@ export function ChatMessage({ message, isUser, timestamp }: ChatMessageProps) {
           damping: 20,
         }}
       >
-        <div className="whitespace-pre-wrap break-words">
+        <div className="whitespace-pre-wrap">
           <ReactMarkdown
             components={{
               strong: ({ node, ...props }) => <strong {...props} />,

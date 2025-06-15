@@ -1,29 +1,60 @@
-
 "use client";
 
-import { useState, useEffect } from "react";
+import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
+import { Button } from "@/components/ui/button";
+import { ChatMessage } from "@/components/ui/chat-message";
+import { useState, useRef, useEffect } from "react";
+import { RefreshCw, Webhook as WebhookIcon, Settings, Trash2 } from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
-import { Webhook, ChatMessage as ChatMessageType } from "../chat/types";
-import { ChatHeader } from "../chat/ChatHeader";
-import { MessageList } from "../chat/MessageList";
-import { WebhookSettingsDialog } from "../chat/WebhookSettingsDialog";
-import { ChatInputArea } from "../chat/ChatInputArea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 
-function generateSessionId() {
-  return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+interface Webhook {
+  id: string;
+  name: string;
+  url: string;
+}
+
+interface ChatMessage {
+  id: string;
+  message: string;
+  isUser: boolean;
+  timestamp: Date;
 }
 
 export function PlaceholdersAndVanishInputDemo() {
   const [sessionId, setSessionId] = useState(() => generateSessionId());
   const [isLoading, setIsLoading] = useState(false);
-  const [messages, setMessages] = useState<ChatMessageType[]>([]);
-  
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const [inputValue, setInputValue] = useState("");
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [activeWebhookOverride, setActiveWebhookOverride] =
+    useState<Webhook | null>(null);
+
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [defaultWebhook, setDefaultWebhook] = useState<Webhook | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newWebhookName, setNewWebhookName] = useState("");
+  const [newWebhookUrl, setNewWebhookUrl] = useState("");
 
   useEffect(() => {
     try {
@@ -90,6 +121,26 @@ export function PlaceholdersAndVanishInputDemo() {
   }, [webhooks, defaultWebhook]);
 
 
+  const placeholders = [
+    "What's the first rule of Fight Club?",
+    "Who is Tyler Durden?",
+    "Where is Andrew Laeddis Hiding?",
+    "Write a Javascript method to reverse a string",
+    "How to assemble your own PC?",
+  ];
+
+  function generateSessionId() {
+    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   const handleNewConversation = () => {
     const newSessionId = generateSessionId();
     setSessionId(newSessionId);
@@ -98,7 +149,7 @@ export function PlaceholdersAndVanishInputDemo() {
   };
 
   const addMessage = (message: string, isUser: boolean) => {
-    const newMessage: ChatMessageType = {
+    const newMessage: ChatMessage = {
       id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       message,
       isUser,
@@ -155,30 +206,63 @@ export function PlaceholdersAndVanishInputDemo() {
     }
   };
 
-  const handleFormSubmit = async (message: string, webhook: Webhook | null) => {
-    if (!webhook) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInputValue(value);
+
+    if (value.startsWith("/") && !activeWebhookOverride) {
+      setShowCommandPalette(true);
+    } else {
+      setShowCommandPalette(false);
+    }
+  };
+
+  const handleSelectWebhook = (webhookName: string) => {
+    const webhook = webhooks.find((w) => w.name === webhookName);
+    if (webhook) {
+      setActiveWebhookOverride(webhook);
+    }
+    setInputValue("");
+    setShowCommandPalette(false);
+  };
+
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const messageToSubmit = inputValue.trim();
+    if (!messageToSubmit) return;
+
+    let targetWebhook = activeWebhookOverride || defaultWebhook;
+
+    if (!targetWebhook) {
       addMessage(
         "Please configure a default webhook in settings.",
         false
       );
       return;
     }
-    
-    console.log("submitted:", message, "to", webhook.name);
-    await sendToWebhook(message, webhook.url);
+
+    if (messageToSubmit && targetWebhook) {
+      console.log("submitted:", messageToSubmit, "to", targetWebhook.name);
+      await sendToWebhook(messageToSubmit, targetWebhook.url);
+      setInputValue("");
+      setActiveWebhookOverride(null);
+    }
   };
 
-  const handleAddWebhook = (name: string, url: string) => {
+  const handleAddWebhook = () => {
+    if (!newWebhookName.trim() || !newWebhookUrl.trim()) return;
     const newWebhook: Webhook = {
       id: `wh_${Date.now()}`,
-      name: name,
-      url: url,
+      name: newWebhookName,
+      url: newWebhookUrl,
     };
     const updatedWebhooks = [...webhooks, newWebhook];
     setWebhooks(updatedWebhooks);
     if (!defaultWebhook) {
       setDefaultWebhook(newWebhook);
     }
+    setNewWebhookName("");
+    setNewWebhookUrl("");
   };
 
   const handleDeleteWebhook = (id: string) => {
@@ -193,29 +277,210 @@ export function PlaceholdersAndVanishInputDemo() {
     setDefaultWebhook(webhook);
   };
 
+  const handleClearActiveWebhook = () => {
+    setActiveWebhookOverride(null);
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
+  const handleAnimationComplete = () => {
+    setInputValue("");
+  };
+
+  const filteredWebhooks =
+    inputValue.startsWith("/") && !activeWebhookOverride
+      ? webhooks.filter((w) =>
+          w.name.toLowerCase().includes(inputValue.substring(1).toLowerCase())
+        )
+      : [];
+  
+  const inputRef = useRef<HTMLInputElement>(null);
+
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <ChatHeader onNewConversation={handleNewConversation} isLoading={isLoading} />
-        <WebhookSettingsDialog
-          isOpen={isDialogOpen}
-          onOpenChange={setIsDialogOpen}
-          webhooks={webhooks}
-          defaultWebhook={defaultWebhook}
-          onAddWebhook={handleAddWebhook}
-          onDeleteWebhook={handleDeleteWebhook}
-          onSetDefaultWebhook={handleSetDefaultWebhook}
-        />
-      </Dialog>
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
+        <h2 className="text-2xl font-semibold dark:text-white text-black">
+          Ask Aceternity UI Anything
+        </h2>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleNewConversation}
+            variant="outline"
+            size="icon"
+            disabled={isLoading}
+            className="h-10 w-10"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={isLoading}
+                className="h-10 w-10"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[525px]">
+              <DialogHeader>
+                <DialogTitle>Gérer les Webhooks</DialogTitle>
+                <DialogDescription>
+                  Ajoutez, supprimez et définissez un webhook par défaut.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <h4 className="font-semibold text-sm">Ajouter un nouveau Webhook</h4>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="name" className="text-right">
+                    Nom
+                  </Label>
+                  <Input
+                    id="name"
+                    value={newWebhookName}
+                    onChange={(e) => setNewWebhookName(e.target.value)}
+                    className="col-span-3"
+                    placeholder="Ex: Mon Agent"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="url" className="text-right">
+                    URL
+                  </Label>
+                  <Input
+                    id="url"
+                    value={newWebhookUrl}
+                    onChange={(e) => setNewWebhookUrl(e.target.value)}
+                    className="col-span-3"
+                    placeholder="https://votre-webhook-url.com"
+                  />
+                </div>
+                <Button onClick={handleAddWebhook}>Ajouter Webhook</Button>
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-semibold text-sm">Webhooks Existants</h4>
+                <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
+                  {webhooks.length > 0 ? (
+                    webhooks.map((webhook) => (
+                    <div
+                      key={webhook.id}
+                      className="flex items-center justify-between p-2 border rounded-md"
+                    >
+                      <div>
+                        <p className="font-medium">
+                          {webhook.name}{" "}
+                          {webhook.id === defaultWebhook?.id && "(Défaut)"}
+                        </p>
+                        <p className="text-sm text-muted-foreground truncate max-w-[200px]">
+                          {webhook.url}
+                        </p>
+                      </div>
+                      <div className="flex gap-1">
+                        {webhook.id !== defaultWebhook?.id && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSetDefaultWebhook(webhook)}
+                          >
+                            Par défaut
+                          </Button>
+                        )}
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => handleDeleteWebhook(webhook.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))): (
+                    <p className="text-sm text-muted-foreground">Aucun webhook configuré.</p>
+                  )}
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Fermer</Button>
+                </DialogClose>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
 
-      <MessageList messages={messages} />
+      {/* Chat Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+            <p>Start a conversation by typing a message below</p>
+          </div>
+        ) : (
+          <>
+            {messages.map((msg) => (
+              <ChatMessage
+                key={msg.id}
+                message={msg.message}
+                isUser={msg.isUser}
+                timestamp={msg.timestamp}
+              />
+            ))}
+            <div ref={messagesEndRef} />
+          </>
+        )}
+      </div>
 
-      <ChatInputArea 
-        isLoading={isLoading}
-        onSubmit={handleFormSubmit}
-        webhooks={webhooks}
-        defaultWebhook={defaultWebhook}
-      />
+      {/* Input Area */}
+      <div className="p-4 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm border-t">
+        <div className="relative max-w-xl mx-auto">
+          {showCommandPalette && filteredWebhooks.length > 0 && (
+            <div className="absolute bottom-full mb-2 w-full rounded-md border bg-popover text-popover-foreground shadow-md z-50">
+              <Command className="rounded-lg border shadow-md">
+                <CommandList>
+                  <CommandEmpty>No results found.</CommandEmpty>
+                  <CommandGroup heading="Webhooks">
+                    {filteredWebhooks.map((webhook) => (
+                      <CommandItem
+                        key={webhook.id}
+                        onSelect={() => handleSelectWebhook(webhook.name)}
+                        className="cursor-pointer"
+                      >
+                        <WebhookIcon className="mr-2 h-4 w-4" />
+                        <span>{webhook.name}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </div>
+          )}
+          <PlaceholdersAndVanishInput
+            placeholders={placeholders}
+            onChange={handleChange}
+            onSubmit={onSubmit}
+            disabled={isLoading}
+            value={inputValue}
+            onAnimationComplete={handleAnimationComplete}
+            pill={
+              activeWebhookOverride
+                ? {
+                    text: activeWebhookOverride.name,
+                    onClear: handleClearActiveWebhook,
+                  }
+                : undefined
+            }
+          />
+        </div>
+
+        {isLoading && (
+          <div className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+            Sending message...
+          </div>
+        )}
+      </div>
     </div>
   );
 }

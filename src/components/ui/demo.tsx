@@ -5,7 +5,6 @@ import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-van
 import { Button } from "@/components/ui/button";
 import { ChatMessage } from "@/components/ui/chat-message";
 import { useState, useRef, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
 import { RefreshCw } from "lucide-react";
 
 interface ChatMessage {
@@ -20,7 +19,6 @@ export function PlaceholdersAndVanishInputDemo() {
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
 
   const placeholders = [
     "What's the first rule of Fight Club?",
@@ -47,10 +45,6 @@ export function PlaceholdersAndVanishInputDemo() {
     setSessionId(newSessionId);
     setMessages([]);
     console.log("New conversation started with sessionId:", newSessionId);
-    toast({
-      title: "New Conversation",
-      description: "Started a new conversation session",
-    });
   };
 
   const addMessage = (message: string, isUser: boolean) => {
@@ -105,11 +99,6 @@ export function PlaceholdersAndVanishInputDemo() {
     } catch (error) {
       console.error("Error sending to webhook:", error);
       addMessage("Sorry, there was an error processing your message.", false);
-      toast({
-        title: "Error",
-        description: "Failed to send message to webhook",
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }

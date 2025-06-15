@@ -1,6 +1,7 @@
 
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import ReactMarkdown from "react-markdown";
 
 interface ChatMessageProps {
   message: string;
@@ -10,16 +11,16 @@ interface ChatMessageProps {
 
 export function ChatMessage({ message, isUser, timestamp }: ChatMessageProps) {
   return (
-    <motion.div 
+    <motion.div
       className={cn("flex mb-4", isUser ? "justify-end" : "justify-start")}
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ 
-        duration: 0.3, 
+      transition={{
+        duration: 0.3,
         ease: "easeOut",
         type: "spring",
         stiffness: 100,
-        damping: 15
+        damping: 15,
       }}
     >
       <motion.div
@@ -31,20 +32,32 @@ export function ChatMessage({ message, isUser, timestamp }: ChatMessageProps) {
         )}
         initial={{ scale: 0.8 }}
         animate={{ scale: 1 }}
-        transition={{ 
-          duration: 0.2, 
+        transition={{
+          duration: 0.2,
           delay: 0.1,
           type: "spring",
           stiffness: 200,
-          damping: 20
+          damping: 20,
         }}
       >
-        <p className="whitespace-pre-wrap">{message}</p>
+        <div className="whitespace-pre-wrap">
+          <ReactMarkdown
+            components={{
+              strong: ({ node, ...props }) => <strong {...props} />,
+              p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+            }}
+          >
+            {message}
+          </ReactMarkdown>
+        </div>
+
         {timestamp && (
-          <p className={cn(
-            "text-xs mt-1 opacity-70",
-            isUser ? "text-blue-100" : "text-gray-500 dark:text-gray-400"
-          )}>
+          <p
+            className={cn(
+              "text-xs mt-1 opacity-70",
+              isUser ? "text-blue-100" : "text-gray-500 dark:text-gray-400"
+            )}
+          >
             {timestamp.toLocaleTimeString()}
           </p>
         )}

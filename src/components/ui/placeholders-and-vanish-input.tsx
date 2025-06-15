@@ -12,6 +12,7 @@ export function PlaceholdersAndVanishInput({
   value,
   onAnimationComplete,
   disabled = false,
+  pill,
 }: {
   placeholders: string[];
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -19,6 +20,7 @@ export function PlaceholdersAndVanishInput({
   value: string;
   onAnimationComplete?: () => void;
   disabled?: boolean;
+  pill?: { text: string; onClear: () => void };
 }) {
   const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
 
@@ -159,6 +161,10 @@ export function PlaceholdersAndVanishInput({
     if (e.key === "Enter" && !animating && !disabled) {
       vanishAndSubmit();
     }
+    if (e.key === "Backspace" && value === "" && pill) {
+      e.preventDefault();
+      pill.onClear();
+    }
   };
 
   const vanishAndSubmit = () => {
@@ -181,7 +187,7 @@ export function PlaceholdersAndVanishInput({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (disabled) return;
-    
+
     vanishAndSubmit();
     onSubmit && onSubmit(e);
   };
@@ -198,10 +204,16 @@ export function PlaceholdersAndVanishInput({
       <canvas
         className={cn(
           "absolute pointer-events-none  text-base transform scale-50 top-[20%] left-2 sm:left-8 origin-top-left filter invert dark:invert-0 pr-20",
-          !animating ? "opacity-0" : "opacity-100"
+          !animating ? "opacity-0" : "opacity-100",
+          pill && "left-28 sm:left-36"
         )}
         ref={canvasRef}
       />
+      {pill && (
+        <span className="absolute z-10 left-3 sm:left-4 top-1/2 -translate-y-1/2 bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-gray-200 rounded-full px-3 py-1 text-sm font-bold">
+          {pill.text}
+        </span>
+      )}
       <input
         name="message"
         onChange={(e) => {
@@ -215,9 +227,10 @@ export function PlaceholdersAndVanishInput({
         type="text"
         disabled={disabled}
         className={cn(
-          "w-full relative text-sm sm:text-base z-50 border-none dark:text-white bg-transparent text-black h-full rounded-full focus:outline-none focus:ring-0 pl-4 sm:pl-10 pr-20",
+          "w-full relative text-sm sm:text-base z-50 border-none dark:text-white bg-transparent text-black h-full rounded-full focus:outline-none focus:ring-0 pr-20",
           animating && "text-transparent dark:text-transparent",
-          disabled && "cursor-not-allowed"
+          disabled && "cursor-not-allowed",
+          pill ? "pl-28 sm:pl-36" : "pl-4 sm:pl-10"
         )}
       />
 
@@ -255,7 +268,7 @@ export function PlaceholdersAndVanishInput({
 
       <div className="absolute inset-0 flex items-center rounded-full pointer-events-none">
         <AnimatePresence mode="wait">
-          {!value && (
+          {!value && !pill && (
             <motion.p
               initial={{
                 y: 5,

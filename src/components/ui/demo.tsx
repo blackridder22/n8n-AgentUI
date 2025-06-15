@@ -1,4 +1,3 @@
-
 "use client";
 
 import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
@@ -48,6 +47,8 @@ export function PlaceholdersAndVanishInputDemo() {
 
   const [inputValue, setInputValue] = useState("");
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [activeWebhookOverride, setActiveWebhookOverride] =
+    useState<Webhook | null>(null);
 
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [defaultWebhook, setDefaultWebhook] = useState<Webhook | null>(null);
@@ -209,7 +210,7 @@ export function PlaceholdersAndVanishInputDemo() {
     const value = e.target.value;
     setInputValue(value);
 
-    if (value.startsWith("/") && !value.includes(" ")) {
+    if (value.startsWith("/") && !activeWebhookOverride) {
       setShowCommandPalette(true);
     } else {
       setShowCommandPalette(false);
@@ -217,7 +218,11 @@ export function PlaceholdersAndVanishInputDemo() {
   };
 
   const handleSelectWebhook = (webhookName: string) => {
-    setInputValue(`/${webhookName} `);
+    const webhook = webhooks.find((w) => w.name === webhookName);
+    if (webhook) {
+      setActiveWebhookOverride(webhook);
+    }
+    setInputValue("");
     setShowCommandPalette(false);
   };
 
@@ -226,29 +231,21 @@ export function PlaceholdersAndVanishInputDemo() {
     const messageToSubmit = inputValue.trim();
     if (!messageToSubmit) return;
 
-    let targetWebhook = defaultWebhook;
-    let finalMessage = messageToSubmit;
-
-    if (messageToSubmit.startsWith("/")) {
-      const command = messageToSubmit.split(" ")[0].substring(1);
-      const webhook = webhooks.find(
-        (w) => w.name.toLowerCase() === command.toLowerCase()
-      );
-      if (webhook) {
-        targetWebhook = webhook;
-        finalMessage = messageToSubmit.substring(command.length + 2).trim();
-      }
-    }
+    let targetWebhook = activeWebhookOverride || defaultWebhook;
 
     if (!targetWebhook) {
-      addMessage("Veuillez configurer un webhook par défaut dans les paramètres.", false);
+      addMessage(
+        "Please configure a default webhook in settings.",
+        false
+      );
       return;
     }
 
-    if (finalMessage.trim() && targetWebhook) {
-      console.log("submitted:", finalMessage, "to", targetWebhook.name);
-      await sendToWebhook(finalMessage, targetWebhook.url);
+    if (messageToSubmit && targetWebhook) {
+      console.log("submitted:", messageToSubmit, "to", targetWebhook.name);
+      await sendToWebhook(messageToSubmit, targetWebhook.url);
       setInputValue("");
+      setActiveWebhookOverride(null);
     }
   };
 
@@ -280,16 +277,25 @@ export function PlaceholdersAndVanishInputDemo() {
     setDefaultWebhook(webhook);
   };
 
+  const handleClearActiveWebhook = () => {
+    setActiveWebhookOverride(null);
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
 
   const handleAnimationComplete = () => {
     setInputValue("");
   };
 
-  const filteredWebhooks = inputValue.startsWith("/")
-    ? webhooks.filter((w) =>
-        w.name.toLowerCase().includes(inputValue.substring(1).toLowerCase())
-      )
-    : [];
+  const filteredWebhooks =
+    inputValue.startsWith("/") && !activeWebhookOverride
+      ? webhooks.filter((w) =>
+          w.name.toLowerCase().includes(inputValue.substring(1).toLowerCase())
+        )
+      : [];
+  
+  const inputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
@@ -458,6 +464,14 @@ export function PlaceholdersAndVanishInputDemo() {
             disabled={isLoading}
             value={inputValue}
             onAnimationComplete={handleAnimationComplete}
+            pill={
+              activeWebhookOverride
+                ? {
+                    text: activeWebhookOverride.name,
+                    onClear: handleClearActiveWebhook,
+                  }
+                : undefined
+            }
           />
         </div>
 
